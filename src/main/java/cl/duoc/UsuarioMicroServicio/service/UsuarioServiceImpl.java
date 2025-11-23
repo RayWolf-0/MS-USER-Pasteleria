@@ -2,7 +2,6 @@ package cl.duoc.UsuarioMicroServicio.service;
 
 import cl.duoc.UsuarioMicroServicio.entity.Usuario;
 import cl.duoc.UsuarioMicroServicio.repository.UsuarioRepository;
-import cl.duoc.UsuarioMicroServicio.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +22,12 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Usuario obtenerPorId(String id) {
-        return usuarioRepository.findById(null).orElse(null);
+        return usuarioRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public Usuario buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email).orElse(null);
     }
 
     @Override
@@ -33,7 +37,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public void eliminarUsuario(String id) {
-        usuarioRepository.deleteById(null);;
+        usuarioRepository.deleteById(id);
     }
-
 }
+

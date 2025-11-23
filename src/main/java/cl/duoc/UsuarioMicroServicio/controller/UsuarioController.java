@@ -1,126 +1,159 @@
 package cl.duoc.UsuarioMicroServicio.controller;
 
-import cl.duoc.UsuarioMicroServicio.Assembler.usuarioassembler;
-import cl.duoc.UsuarioMicroServicio.entity.Usuario;
-import cl.duoc.UsuarioMicroServicio.service.UsuarioService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameters;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.hateoas.EntityModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import cl.duoc.UsuarioMicroServicio.entity.Usuario;
+import cl.duoc.UsuarioMicroServicio.entity.LoginRequest;
+import cl.duoc.UsuarioMicroServicio.service.UsuarioService;
+import jakarta.persistence.EntityNotFoundException;
 
+@CrossOrigin(
+    origins = "*",
+    allowedHeaders = { "Content-Type" },
+    exposedHeaders = { "Content-Type" },
+    methods = {
+        RequestMethod.GET,
+        RequestMethod.POST,
+        RequestMethod.PUT,
+        RequestMethod.DELETE,
+        RequestMethod.OPTIONS
+    }
+)
 @RestController
-@RequestMapping("v1/api/usuarios")
+@RequestMapping("/v1/api/usuarios")
 public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
 
-    @Autowired
-    private usuarioassembler assembler;
-
-    //endpoint para obtener todos los usuarios
+    // GET – Listar usuarios
     @GetMapping
-    @Operation(summary = "Usuarios", description = "Operación que lista los usuarios")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Se listaron correctamente los usuarios",
-            content = @Content(mediaType = "application/json",
-                                schema = @Schema(implementation = Usuario.class))),
-        @ApiResponse(responseCode = "404", description = "No se encontro el usuario",
-                content = @Content(mediaType = "application/json",
-                schema = @Schema(type = "string", example = "no se encuentran Datos")))
-    })
-    public List<Usuario> obtenerTodos() {
-        return usuarioService.obtenerUsuarios();
+    public ResponseEntity<List<Usuario>> listar() {
+        List<Usuario> usuarios = usuarioService.obtenerUsuarios();
+        if (usuarios.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(usuarios);
     }
 
-    //endpoint para buscar un usuario por id
-    @Operation(summary = "Endpoint que busca un usuario por id", description = "Operación que busca y lista un usuario")
-    @Parameters(value = {
-        @Parameter(name = "idItem", description = "Id del usuario que se va a buscar", in = ParameterIn.PATH, required = true)
-    })
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Se lista correctamente El usuario",
-            content = @Content(mediaType = "application/json",
-                                schema = @Schema(implementation = Usuario.class))),
-        @ApiResponse(responseCode = "404", description = "No se encuentra el usuario",
-                content = @Content(mediaType = "application/json",
-                schema = @Schema(type = "string", example = "No se encuentran usuarios")))
-    })
+    // GET – Buscar usuario por ID
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<Usuario>> obtenerPorId(@PathVariable int id) {
-        Usuario usuario = usuarioService.obtenerPorId(null);
-        return usuario != null ? ResponseEntity.ok(assembler.toModel(usuario)) : ResponseEntity.notFound().build();
+    public ResponseEntity<?> buscarUsuario(@PathVariable String id) {
+        Usuario usuario = usuarioService.obtenerPorId(id);
+
+        if (usuario == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+        }
+
+        return ResponseEntity.ok(usuario);
     }
 
-    //endpoint para guardar un usuario
+    // POST – Crear usuario
     @PostMapping
-    @Operation(summary = "Endpoint que registra un usuario", description = "Endpoint que registra un usuario", 
-    requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Objeto usuario que se va a registrar", required = true,
-    content = @Content(schema = @Schema(implementation = Usuario.class))
-    ))
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200",description = "Indica que se registro correctamente el usuario", 
-        content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class))),
-        @ApiResponse(responseCode = "500", description = "Indica que no se logro registrar el usuario",
-        content = @Content(schema = @Schema(type = "String", example = "No se puede registar El usuario")))
-    })
-    public Usuario crearUsuario(@RequestBody Usuario usuario) {
-        return usuarioService.guardarUsuario(usuario);
-    }
+    public ResponseEntity<?> crearUsuario(@RequestBody Usuario usuario) {
 
-    //endpoint que edita un usuario
-    @PutMapping("/{id}")
-    @Operation(summary = "Endpoint que edita un usuario", description = "Endpoint que edita un usuario", 
-    requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Objeto usuario que se va a editar", required = true,
-    content = @Content(schema = @Schema(implementation = Usuario.class))
-    ))
-    @Parameters(value = {
-        @Parameter(name = "iditem", description = "Id del usuario que se va a editar", in = ParameterIn.PATH, required = true)
-    })
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200",description = "Indica que se registro correctamente el usuario", 
-        content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class))),
-        @ApiResponse(responseCode = "500", description = "usuaio no esta registrada",
-        content = @Content(schema = @Schema(type = "String", example = "usuario no esta registrado")))
-    })
-    public ResponseEntity<EntityModel<Usuario>> actualizarUsuario(@PathVariable int id, @RequestBody Usuario usuarioActualizado) {
-        Usuario usuarioExistente = usuarioService.obtenerPorId(null);
-        if (usuarioExistente != null) {
-            usuarioActualizado.setIdUsuario(null);
-            return ResponseEntity.ok(assembler.toModel(usuarioExistente));
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            // Verificar si el email ya existe
+            Usuario existente = usuarioService.buscarPorEmail(usuario.getEmail());
+            if (existente != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("El correo ya está registrado");
+            }
+
+            usuarioService.guardarUsuario(usuario);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body("Usuario registrado exitosamente");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al registrar usuario");
         }
     }
 
-    //endpoint para eliminar un usuario
+    // DELETE – Eliminar usuario
     @DeleteMapping("/{id}")
-    @Operation(summary = "Endpoint que busca y elimina un usuario", description = "Operación que busca y elimina un usuario")
-    @Parameters(value = {
-        @Parameter(name = "idusuario", description = "Id del usuario que se va a eliminar", in = ParameterIn.PATH, required = true)
-    })
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Se elimina usuario",
-        content = @Content(mediaType = "application/json",
-        schema = @Schema(type = "string", example = "Se elimina usuario"))),
-        @ApiResponse(responseCode = "404", description = "usuario no esta registrado",
-                content = @Content(mediaType = "application/json",
-                schema = @Schema(type = "string", example = "usuario no esta registrado")))
-    })
-    public ResponseEntity<Void> eliminarUsuario(@PathVariable int id) {
-        usuarioService.eliminarUsuario(null);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> eliminar(@PathVariable String id) {
+        Usuario usuario = usuarioService.obtenerPorId(id);
+
+        if (usuario == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("El usuario no existe");
+        }
+
+        usuarioService.eliminarUsuario(id);
+        return ResponseEntity.ok("Usuario eliminado correctamente");
     }
-    
+
+    // PUT – Actualizar usuario
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarUsuario(
+            @PathVariable String id,
+            @RequestBody Usuario usuarioActualizado) {
+
+        Usuario original = usuarioService.obtenerPorId(id);
+
+        if (original == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+        }
+
+        // Actualización de campos
+        original.setNombre(usuarioActualizado.getNombre());
+        original.setApellido(usuarioActualizado.getApellido());
+        original.setEmail(usuarioActualizado.getEmail());
+        original.setContrasena(usuarioActualizado.getContrasena());
+        original.setTelefono(usuarioActualizado.getTelefono());
+        original.setDireccion(usuarioActualizado.getDireccion());
+        original.setTipo_usuario(usuarioActualizado.getTipo_usuario());
+
+        usuarioService.guardarUsuario(original);
+
+        return ResponseEntity.ok("Usuario actualizado");
+    }
+
+    // POST – LOGIN
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+
+        try {
+            if (request.getMail() == null || request.getMail().isBlank()
+                    || request.getPassword() == null || request.getPassword().isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body("Email y contraseña son obligatorios");
+            }
+
+            // Buscar usuario por email REAL
+            Usuario usuario = usuarioService.buscarPorEmail(request.getMail());
+
+            if (usuario == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("El correo no está registrado");
+            }
+
+            // Validación de contraseña
+            if (!usuario.getContrasena().equals(request.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Contraseña incorrecta");
+            }
+
+            // Login exitoso → retorna usuario
+            return ResponseEntity.ok(usuario);
+
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al procesar el login");
+        }
+    }
 }
+

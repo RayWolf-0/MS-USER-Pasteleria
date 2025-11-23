@@ -54,7 +54,8 @@ public class DataLoader implements CommandLineRunner {
 
             u.setTelefono(faker.number().digits(9));
             u.setTipo_usuario("cliente");
-            u.setPuntos(random.nextInt(500));
+            u.setPuntos(0);
+
 
             usuarioservice.guardarUsuario(u);
             System.out.println("Usuario registrado: " + u.getIdUsuario());

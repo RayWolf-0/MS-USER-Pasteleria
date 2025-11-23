@@ -52,7 +52,14 @@ public class Usuario {
     private String direccion;
 
     @Column(name = "PUNTOS")
-    @Schema(description = "puntos del usuario")
-    private int puntos;
+    private Integer puntos = 0;
+
+    @Column(name = "IDFIREBASE", nullable = true)
+    private String idfirebase;
+
+    // Imagen almacenada como binario (BLOB)
+    @Lob
+    @Column(name = "imagen", nullable = true)
+    private byte[] imagen;
 
 }
