@@ -54,8 +54,8 @@ public class Usuario {
     @Column(name = "PUNTOS")
     private Integer puntos = 0;
 
-    @Column(name = "IDFIREBASE", nullable = true)
-    private String idfirebase;
+    @Column(name = "ID_FIREBASE", nullable = true)
+    private String idFirebase;
 
     // Imagen almacenada como binario (BLOB)
     @Lob

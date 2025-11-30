@@ -12,18 +12,13 @@ import cl.duoc.UsuarioMicroServicio.entity.LoginRequest;
 import cl.duoc.UsuarioMicroServicio.service.UsuarioService;
 import jakarta.persistence.EntityNotFoundException;
 
-@CrossOrigin(
-    origins = "*",
-    allowedHeaders = { "Content-Type" },
-    exposedHeaders = { "Content-Type" },
-    methods = {
+@CrossOrigin(origins = "*", allowedHeaders = { "Content-Type" }, exposedHeaders = { "Content-Type" }, methods = {
         RequestMethod.GET,
         RequestMethod.POST,
         RequestMethod.PUT,
         RequestMethod.DELETE,
         RequestMethod.OPTIONS
-    }
-)
+})
 @RestController
 @RequestMapping("/v1/api/usuarios")
 public class UsuarioController {
@@ -155,5 +150,16 @@ public class UsuarioController {
                     .body("Error al procesar el login");
         }
     }
-}
 
+    @GetMapping("/firebase/{uid}")
+    public ResponseEntity<?> buscarPorFirebase(@PathVariable String uid) {
+        try {
+            Usuario u = usuarioService.buscarUsuarioPorFirebase(uid);
+            return ResponseEntity.ok(u);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Usuario no encontrado");
+        }
+    }
+
+}
